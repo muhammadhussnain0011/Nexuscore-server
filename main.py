@@ -48,6 +48,7 @@ async def get_or_create_queue(session_id: str) -> asyncio.Queue:
 async def process_session_queue(session_id: str, queue: asyncio.Queue):
     while True:
         device_id, message = await queue.get()
+        await asyncio.sleep(0.5)  # TEMPORARY: simulate slow processing (e.g. AI model) — remove after testing
         print(f"⚙️ Processing (session={session_id}) from {device_id}: {message}")
         queue.task_done()
 
