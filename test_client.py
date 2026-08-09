@@ -3,7 +3,7 @@ import websockets
 import json
 
 async def test():
-    uri = "ws://localhost:8000/ws/echo"
+    uri = "wss://nexuscore-server.onrender.com/ws/echo"
     async with websockets.connect(uri) as ws:
         message = {
             "type": "control",
