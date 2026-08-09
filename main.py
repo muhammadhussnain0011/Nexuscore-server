@@ -27,12 +27,12 @@ async def websocket_echo(websocket: WebSocket):
         data = await websocket.receive_json()
         await websocket.send_json(data)
 
-# ---------- Device Tracking Endpoint ----------
+# ---------- Device Tracking + Session Queues ----------
 connected_devices = {}
-
 session_queues: dict[str, asyncio.Queue] = {}
 session_tasks: dict[str, asyncio.Task] = {}
-device_sessions: dict[str, str] = {}  # device_id -> session_id mapping
+device_sessions: dict[str, str] = {}
+
 
 async def get_or_create_queue(session_id: str) -> asyncio.Queue:
     if session_id not in session_queues:
@@ -42,11 +42,13 @@ async def get_or_create_queue(session_id: str) -> asyncio.Queue:
         print(f"🆕 Created queue + worker for session {session_id}")
     return session_queues[session_id]
 
+
 async def process_session_queue(session_id: str, queue: asyncio.Queue):
     while True:
         device_id, message = await queue.get()
         print(f"⚙️ Processing (session={session_id}) from {device_id}: {message}")
         queue.task_done()
+
 
 @app.websocket("/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: str):
@@ -58,10 +60,13 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
         while True:
             message = await websocket.receive()
 
+            if message["type"] == "websocket.disconnect":
+                raise WebSocketDisconnect()
+
             if "text" in message:
                 data = json.loads(message["text"])
                 session_id = data.get("session_id", "unknown")
-                device_sessions[device_id] = session_id  # remember which session this device belongs to
+                device_sessions[device_id] = session_id
 
                 queue = await get_or_create_queue(session_id)
                 await queue.put((device_id, data))
