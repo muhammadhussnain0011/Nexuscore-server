@@ -36,8 +36,18 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
 
     try:
         while True:
-            data = await websocket.receive_json()
-            print(f"📩 Received from {device_id}: {data}")
+            message = await websocket.receive()
+
+            if "text" in message:
+                import json
+                data = json.loads(message["text"])
+                print(f"📩 JSON from {device_id}: {data}")
+
+            elif "bytes" in message:
+                audio_chunk = message["bytes"]
+                print(f"🎵 Audio chunk from {device_id}: {len(audio_chunk)} bytes")
+
     except WebSocketDisconnect:
         del connected_devices[device_id]
         print(f"❌ {device_id} disconnected. Total devices: {len(connected_devices)}")
+        
